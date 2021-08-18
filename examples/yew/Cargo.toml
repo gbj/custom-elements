@@ -1,0 +1,24 @@
+[package]
+authors = ["Greg Johnston <greg.johnston@gmail.com>"]
+categories = ["wasm"]
+description = "Example Web Component using Yew and custom-elements"
+license = "Apache-2.0/MIT"
+name = "yew-web-component"
+readme = "./README.md"
+repository = "https://github.com/gbj/custom-elements"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+custom-elements = { path = "../.."}
+wasm-bindgen = "0.2"
+yew = "0.18"
+
+[dependencies.web-sys]
+version = "0.3"
+features = [
+  "Window"
+]
