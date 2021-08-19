@@ -12,8 +12,13 @@
       }
       main();
     </script>
+    <style>
+      /* This will only affect the paragraph outside the components, not the counts within. */
+      p { color: blue; }
+    </style>
 	</head>
   <body>
+    <p>This text should be blue, because it's not affected by the encapsulated style.</p>
     <ce-yew></ce-yew>
     <ce-yew></ce-yew>
     <ce-yew></ce-yew>

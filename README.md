@@ -20,9 +20,9 @@ impl CustomElement for MyWebComponent {
 
     fn attribute_changed_callback(
         &self,
-        _this: &HtmlElement,
+        this: &HtmlElement,
         name: String,
-        _old_value: Option<String>,
+        old_value: Option<String>,
         new_value: Option<String>,
     ) {
         if name == "name" {
@@ -67,9 +67,9 @@ fn adopted_callback(&self, _this: &HtmlElement) {
 
 fn attribute_changed_callback(
     &self,
-    _this: &HtmlElement,
+    this: &HtmlElement,
     name: String,
-    _old_value: Option<String>,
+    old_value: Option<String>,
     new_value: Option<String>,
 ) {
     if name == "name" {

@@ -55,6 +55,16 @@ pub trait CustomElement: Default + 'static {
     ) {
     }
 
+    /// CSS stylesheet to be attached to the element as a `<style>` tag.
+    fn style() -> Option<&'static str> {
+        None
+    }
+
+    /// URL for CSS stylesheets to be attached to the element as `<link>` tags.
+    fn style_urls() -> Vec<&'static str> {
+        Vec::new()
+    }
+
     ///
     fn define(tag_name: &'static str) {
         // constructor function will be called for each new instance of the component
@@ -133,8 +143,23 @@ pub trait CustomElement: Default + 'static {
                 .collect::<js_sys::Array>(),
         );
 
+        // styles
+        let stylesheets = JsValue::from(
+            Self::style_urls()
+                .iter()
+                .map(|attr| JsValue::from_str(attr))
+                .collect::<js_sys::Array>(),
+        );
+
         // call out to JS to define the Custom Element
-        make_custom_element(tag_name, Self::shadow(), &constructor, observed_attributes);
+        make_custom_element(
+            tag_name,
+            Self::shadow(),
+            &constructor,
+            observed_attributes,
+            Self::style(),
+            stylesheets,
+        );
         constructor.forget();
     }
 }
@@ -147,5 +172,7 @@ extern "C" {
         shadow: bool,
         build_element: &Closure<dyn FnMut(HtmlElement) -> web_sys::Node>,
         observed_attributes: JsValue,
+        style: Option<&str>,
+        stylesheets: JsValue,
     );
 }

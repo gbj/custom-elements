@@ -12,8 +12,13 @@
       }
       main();
     </script>
+    <style>
+      /* This will only affect the paragraph outside the Web Components. */
+      p { color: blue; }
+    </style>
 	</head>
   <body>
+    <p>This text should be blue, because it's not affected by the encapsulated style. (The counts should be green!)</p>
     <ce-vanilla></ce-vanilla>
     <ce-vanilla name="Alice"></ce-vanilla>
     <ce-vanilla name="Bob"></ce-vanilla>

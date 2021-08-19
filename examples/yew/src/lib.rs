@@ -35,6 +35,10 @@ impl CustomElement for ComponentWrapper {
         self.node.clone()
     }
 
+    fn style_urls() -> Vec<&'static str> {
+        vec!["/component_style.css"]
+    }
+
     fn observed_attributes() -> Vec<&'static str> {
         vec!["value"]
     }

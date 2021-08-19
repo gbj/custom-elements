@@ -70,6 +70,10 @@ impl CustomElement for MyWebComponent {
     fn adopted_callback(&self, _this: &HtmlElement) {
         log("adopted");
     }
+
+    fn style() -> Option<&'static str> {
+        Some("p { color: green; }")
+    }
 }
 
 // wasm_bindgen entry point defines the Custom Element, then creates a few of them
