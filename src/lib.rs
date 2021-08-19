@@ -1,17 +1,41 @@
+//! The Web Components standard creates a browser feature that allows you to create reusable components, called Custom Elements.
+//!
+//! While web_sys exposes the browser’s CustomElementRegistry interface, it can be hard to use. Creating a Custom Element requires calling customElements.define() and passing it an ES2015 class that extends HTMLElement, which is not currently possible to do directly from Rust.
+//!
+//! This crate provides a [CustomElement][CustomElement] trait that, when implemented, allows you to encapsulate any Rust structure as a reusable web component without writing any JavaScript. In theory it should be usable with any Rust front-end framework.
+//! ```rust
+//! impl CustomElement for MyWebComponent {
+//!     fn to_node(&mut self) -> Node {
+//!         self.view()
+//!     }
+//!
+//!     fn observed_attributes() -> Vec<&'static str> {
+//!         vec!["name"]
+//!     }
+//!
+//!     fn attribute_changed_callback(
+//!         &self,
+//!         this: &HtmlElement,
+//!         name: String,
+//!         old_value: Option<String>,
+//!         new_value: Option<String>,
+//!     ) {
+//!         if name == "name" {
+//!             // do something
+//!         }
+//!     }
+//! }
+//!
+//! #[wasm_bindgen]
+//! pub fn define_custom_elements() {
+//!     MyWebComponent::define("my-component");
+//! }
+//! ```
+
 use std::sync::{Arc, Mutex};
 
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{HtmlElement, Node};
-
-/// Specifies whether a shadow root should be attached to the element, and in which mode.
-pub enum ShadowDOM {
-    /// No shadow root will be attached; the component will simply be appended to the custom element as a child.
-    None,
-    /// A shadow root will be attached with the [Mode](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/mode) set to `open`.
-    Open,
-    /// A shadow root will be attached with the [Mode](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/mode) set to `closed`.
-    Closed,
-}
 
 /// A custom DOM element that can be reused via the Web Components/Custom Elements standard.
 pub trait CustomElement: Default + 'static {
@@ -60,12 +84,22 @@ pub trait CustomElement: Default + 'static {
         None
     }
 
-    /// URL for CSS stylesheets to be attached to the element as `<link>` tags.
+    /// URLs for CSS stylesheets to be attached to the element as `<link>` tags.
     fn style_urls() -> Vec<&'static str> {
         Vec::new()
     }
 
+    /// Must be called somewhere to define the custom element and register it with the DOM Custom Elements Registry.
     ///
+    /// Note that custom element names must contain a hyphen.
+    ///
+    /// ```rust
+    /// impl CustomElement for MyCustomElement { /* ... */  */}
+    /// #[wasm_bindgen]
+    /// pub fn define_elements() {
+    ///     MyCustomElement::define("my-component");
+    /// }
+    /// ```
     fn define(tag_name: &'static str) {
         // constructor function will be called for each new instance of the component
         let constructor = Closure::wrap(Box::new(move |this: HtmlElement| {
