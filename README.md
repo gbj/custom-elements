@@ -20,11 +20,14 @@ impl CustomElement for MyWebComponent {
 
     fn attribute_changed_callback(
         &self,
-    ) -> Box<dyn FnMut(web_sys::HtmlElement, String, Option<String>, Option<String>)> {
-        let node = self.name_node.clone();
-        Box::new(move |_this, _name, _old_value, new_value| {
-            node.set_data(&new_value.unwrap_or("friend".to_string()));
-        })
+        _this: &HtmlElement,
+        name: String,
+        _old_value: Option<String>,
+        new_value: Option<String>,
+    ) {
+        if name == "name" {
+            // do something
+        }
     }
 }
 
@@ -46,35 +49,40 @@ fn shadow() -> bool {
 
 ## Lifecycle Methods
 
-You can implement each of the custom element’s lifecycle callbacks. Because these will be wrapped in `wasm_bindgen` `Closure`s that are sent to JavaScript, they must have a `'static` lifetime; hence the awkward API of returning boxed closures, rather than simply defining methods that take `&self`. Each of the callbacks is called with the custom element itself as its first argument.
+You can implement each of the custom element’s lifecycle callbacks. Each of the callbacks is passed both the component for which the trait is being implemented, and the `HtmlElement` of the custom element.
 
 ```rust
-fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-    Box::new(|_this: HtmlElement| log("connected"))
+
+fn connected_callback(&self, _this: &HtmlElement) {
+    log("connected");
 }
 
-fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-    Box::new(|_this: HtmlElement| log("disconnected"))
+fn disconnected_callback(&self, _this: &HtmlElement) {
+    log("disconnected");
 }
 
-fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-    Box::new(|_this: HtmlElement| log("adopted"))
+fn adopted_callback(&self, _this: &HtmlElement) {
+    log("adopted");
 }
 
-// additional arguments reflect API of attributeChangedCallback(name, oldValue, newValue)
-fn attribute_changed_callback(&self,) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
-    let node = self.name_node.clone();
-    Box::new(move |_this, name, _old_value, new_value| {
-      if name == "name" {
-        node.set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
-      }
-    })
+fn attribute_changed_callback(
+    &self,
+    _this: &HtmlElement,
+    name: String,
+    _old_value: Option<String>,
+    new_value: Option<String>,
+) {
+    if name == "name" {
+        // do something
+    }
 }
 ```
 
 ## Using Rust Frameworks
 
-The minimum needed to implement `CustomElement` is some way to get a `web_sys::Node` from your component. It’s also generally helpful to have it respond to changes in its attributes via the `attribute_changed_callback`. Depending on the framework, these may be more or less difficult to accomplish. See the Yew example for a wrapped component that does both.
+The minimum needed to implement `CustomElement` is some way to get a `web_sys::Node` from your component. It’s also generally helpful to have it respond to changes in its attributes via the `attribute_changed_callback`. Depending on the framework, these may be more or less difficult to accomplish; in particular, for Elm-inspired frameworks you may need to create a wrapper that owns some way of updating the app’s state.
+
+See the Yew example for an example of how to work with a framework’s API.
 
 # Resources
 
