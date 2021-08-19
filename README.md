@@ -8,7 +8,7 @@ While `web_sys` exposes the browser’s [CustomElementRegistry](https://rustwasm
 
 This crate provides a `CustomElement` trait that, when implemented, allows you to encapsulate any Rust structure as a reusable web component without writing any JavaScript. In theory it should be usable with any Rust front-end framework; the `examples` directory contains examples for Yew and for a vanilla Rust/WASM component.
 
-```
+```rust
 impl CustomElement for MyWebComponent {
     fn to_node(&mut self) -> Node {
         self.view()
