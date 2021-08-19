@@ -34,8 +34,57 @@ pub fn define_custom_elements() {
 }
 ```
 
+## Shadow DOM
+
+By default, these custom elements use the Shadow DOM (in “open” mode) to encapsulate the styles and content of the element. You can override that choice simply by implementing the `shadow` method and returning `false`:
+
+```rust
+fn shadow() -> bool {
+    false
+}
+```
+
+## Lifecycle Methods
+
+You can implement each of the custom element’s lifecycle callbacks. Because these will be wrapped in `wasm_bindgen` `Closure`s that are sent to JavaScript, they must have a `'static` lifetime; hence the awkward API of returning boxed closures, rather than simply defining methods that take `&self`. Each of the callbacks is called with the custom element itself as its first argument.
+
+```rust
+fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+    Box::new(|_this: HtmlElement| log("connected"))
+}
+
+fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+    Box::new(|_this: HtmlElement| log("disconnected"))
+}
+
+fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+    Box::new(|_this: HtmlElement| log("adopted"))
+}
+
+// additional arguments reflect API of attributeChangedCallback(name, oldValue, newValue)
+fn attribute_changed_callback(&self,) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
+    let node = self.name_node.clone();
+    Box::new(move |_this, name, _old_value, new_value| {
+      if name == "name" {
+        node.set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
+      }
+    })
+}
+```
+
+## Using Rust Frameworks
+
+The minimum needed to implement `CustomElement` is some way to get a `web_sys::Node` from your component. It’s also generally helpful to have it respond to changes in its attributes via the `attribute_changed_callback`. Depending on the framework, these may be more or less difficult to accomplish. See the Yew example for a wrapped component that does both.
+
+# Resources
+
+This is a fairly minimal wrapper for the Custom Elements API. The following MDN sources should give you more than enough information to start creating custom elements:
+- [Web Components](https://developer.mozilla.org/en-US/docs/Web/Web_Components)
+- [Using custom elements](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements)
+- [Using the lifecycle callbacks](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_custom_elements#using_the_lifecycle_callbacks)
+
 # Running the Examples
 
-The examples use `wasm-pack` and a simple Python server. If you have the right tools installed, you should be able to run them with a simple
+The examples use `wasm-pack` and a simple Python server. You should be able to run them with a simple
 
 `./build.sh && ./runserver`
