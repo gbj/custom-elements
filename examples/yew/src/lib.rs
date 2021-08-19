@@ -7,7 +7,7 @@ use component::Msg;
 use custom_elements::CustomElement;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
-use web_sys::window;
+use web_sys::{window, HtmlElement};
 use yew::html::Scope;
 use yew::prelude::*;
 
@@ -41,20 +41,21 @@ impl CustomElement for ComponentWrapper {
 
     fn attribute_changed_callback(
         &self,
-    ) -> Box<dyn FnMut(web_sys::HtmlElement, String, Option<String>, Option<String>)> {
-        let scope = self.scope.clone();
-        Box::new(
-            move |_this, name, _old_value, new_value| match name.as_str() {
-                "value" => {
-                    if let Some(value) = new_value {
-                        if let Ok(value) = value.parse::<i64>() {
-                            scope.send_message(Msg::Set(value));
-                        }
+        _this: &HtmlElement,
+        name: String,
+        _old_value: Option<String>,
+        new_value: Option<String>,
+    ) {
+        match name.as_str() {
+            "value" => {
+                if let Some(value) = new_value {
+                    if let Ok(value) = value.parse::<i64>() {
+                        self.scope.send_message(Msg::Set(value));
                     }
                 }
-                _ => (),
-            },
-        )
+            }
+            _ => (),
+        };
     }
 }
 

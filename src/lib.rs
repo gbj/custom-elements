@@ -1,13 +1,25 @@
+use std::sync::{Arc, Mutex};
+
 use wasm_bindgen::{prelude::*, JsCast};
-use web_sys::{HtmlElement, Node};
+use web_sys::{HtmlElement, Node, ShadowRootInit, ShadowRootMode};
+
+/// Specifies whether a shadow root should be attached to the element, and in which mode.
+pub enum ShadowDOM {
+    /// No shadow root will be attached; the component will simply be appended to the custom element as a child.
+    None,
+    /// A shadow root will be attached with the [Mode](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/mode) set to `open`.
+    Open,
+    /// A shadow root will be attached with the [Mode](https://developer.mozilla.org/en-US/docs/Web/API/ShadowRoot/mode) set to `closed`.
+    Closed,
+}
 
 /// A custom DOM element that can be reused via the Web Components/Custom Elements standard.
-pub trait CustomElement: Default {
+pub trait CustomElement: Default + 'static {
     /// Returns a root [Node][web_sys::Node] that will be appended to the custom element.
     /// Depending on your component, this will probably do some kind of initialization or rendering.
     fn to_node(&mut self) -> Node;
 
-    /// Whether a [Shadow DOM](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_shadow_DOM)
+    /// Whether a [Shadow root](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_shadow_DOM)
     /// should be attached to the element or not. Shadow DOM encapsulates styles, but makes some DOM manipulation more difficult.
     ///
     /// Defaults to `true`.
@@ -18,89 +30,46 @@ pub trait CustomElement: Default {
     /// The names of the attributes whose changes should be observed. If an attribute name is in this list,
     /// [attribute_changed_callback](CustomElement::attribute_changed_callback) will be invoked when it changes.
     /// If it is not, nothing will happen when the DOM attribute changes.
-    ///
-    /// ```
-    /// fn observed_attributes() -> Vec<&'static str> {
-    ///    vec!["name"]
-    /// }
-    /// ```
     fn observed_attributes() -> Vec<&'static str> {
         Vec::new()
     }
 
     /// Invoked each time the custom element is appended into a document-connected element.
     /// This will happen each time the node is moved, and may happen before the element's contents have been fully parsed.
-    ///
-    /// The argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
-    ///
-    /// ```
-    /// fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-    ///		Box::new(|_this: HtmlElement| log("connected"))
-    /// }
-    /// ```
-    fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_| ())
-    }
+    fn connected_callback(&self, this: &HtmlElement) {}
 
     /// Invoked each time the custom element is disconnected from the document's DOM.
-    ///
-    /// The argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
-    ///
-    /// ```
-    /// fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-    ///		Box::new(|_this: HtmlElement| log("disconnected"))
-    /// }
-    /// ```
-    fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_| ())
-    }
+    fn disconnected_callback(&self, this: &HtmlElement) {}
 
     /// Invoked each time the custom element is moved to a new document.
-    ///
-    /// The argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
-    ///
-    /// ```
-    /// fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-    ///		Box::new(|_this: HtmlElement| log("adopted"))
-    /// }
-    /// ```
-    fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_| ())
-    }
+    fn adopted_callback(&self, this: &HtmlElement) {}
 
     /// Invoked each time one of the custom element's attributes is added, removed, or changed.
     /// Which attributes to notice change for is specified in [observed_attributes](CustomElement::observed_attributes).
-    ///
-    /// The first argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
-    ///
-    /// The second, third, and fourth arguments are the name of the attribute that has been changed, its old value, and its new value.
-    ///
-    /// ```
-    /// fn attribute_changed_callback(
-    ///    &self,
-    ///) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
-    ///    let node = self.name_node.clone();
-    ///    Box::new(move |_this, name, _old_value, new_value| {
-    ///        if name == "name" {
-    ///            node.set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
-    ///        }
-    ///    })
-    /// }
-    /// ```
     fn attribute_changed_callback(
         &self,
-    ) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
-        Box::new(|_, _, _, _| ())
+        this: &HtmlElement,
+        name: String,
+        old_value: Option<String>,
+        new_value: Option<String>,
+    ) {
     }
 
     ///
     fn define(tag_name: &'static str) {
         // constructor function will be called for each new instance of the component
-        let constructor = Closure::wrap(Box::new(|this: HtmlElement| {
-            let mut component = Self::default();
+        let constructor = Closure::wrap(Box::new(move |this: HtmlElement| {
+            let component = Arc::new(Mutex::new(Self::default()));
 
             // connectedCallback
-            let connected = Closure::wrap(component.connected_callback());
+            let cmp = component.clone();
+            let el = this.clone();
+            let connected = Closure::wrap(Box::new({
+                move || {
+                    let lock = cmp.lock().unwrap();
+                    lock.connected_callback(&el);
+                }
+            }) as Box<dyn FnMut()>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_connectedCallback"),
@@ -110,7 +79,12 @@ pub trait CustomElement: Default {
             connected.forget();
 
             // disconnectedCallback
-            let disconnected = Closure::wrap(component.disconnected_callback());
+            let cmp = component.clone();
+            let el = this.clone();
+            let disconnected = Closure::wrap(Box::new(move || {
+                let lock = cmp.lock().unwrap();
+                lock.disconnected_callback(&el);
+            }) as Box<dyn FnMut()>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_disconnectedCallback"),
@@ -120,7 +94,12 @@ pub trait CustomElement: Default {
             disconnected.forget();
 
             // adoptedCallback
-            let adopted = Closure::wrap(component.adopted_callback());
+            let cmp = component.clone();
+            let el = this.clone();
+            let adopted = Closure::wrap(Box::new(move || {
+                let lock = cmp.lock().unwrap();
+                lock.adopted_callback(&el);
+            }) as Box<dyn FnMut()>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_adoptedCallback"),
@@ -130,7 +109,14 @@ pub trait CustomElement: Default {
             adopted.forget();
 
             // attributeChangedCallback
-            let attribute_changed = Closure::wrap(component.attribute_changed_callback());
+            let cmp = component.clone();
+            let el = this.clone();
+            let attribute_changed =
+                Closure::wrap(Box::new(move |this, name, old_value, new_value| {
+                    let lock = cmp.lock().unwrap();
+                    lock.attribute_changed_callback(&el, name, old_value, new_value);
+                })
+                    as Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_attributeChangedCallback"),
@@ -139,7 +125,8 @@ pub trait CustomElement: Default {
             .unwrap();
             attribute_changed.forget();
 
-            component.to_node()
+            let mut lock = component.lock().unwrap();
+            lock.to_node()
         }) as Box<dyn FnMut(HtmlElement) -> Node>);
 
         // observedAttributes is static and needs to be known when the class is defined

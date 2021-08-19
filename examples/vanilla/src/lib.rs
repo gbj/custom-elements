@@ -1,4 +1,4 @@
-use custom_elements::CustomElement;
+use custom_elements::{CustomElement, ShadowDOM};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlElement, Node, Text};
@@ -48,25 +48,27 @@ impl CustomElement for MyWebComponent {
 
     fn attribute_changed_callback(
         &self,
-    ) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
-        let node = self.name_node.clone();
-        Box::new(move |_this, name, _old_value, new_value| {
-            if name == "name" {
-                node.set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
-            }
-        })
+        _this: &HtmlElement,
+        name: String,
+        _old_value: Option<String>,
+        new_value: Option<String>,
+    ) {
+        if name == "name" {
+            self.name_node
+                .set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
+        }
     }
 
-    fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_this: HtmlElement| log("connected"))
+    fn connected_callback(&self, _this: &HtmlElement) {
+        log("connected");
     }
 
-    fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_this: HtmlElement| log("disconnected"))
+    fn disconnected_callback(&self, _this: &HtmlElement) {
+        log("disconnected");
     }
 
-    fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_this: HtmlElement| log("adopted"))
+    fn adopted_callback(&self, _this: &HtmlElement) {
+        log("adopted");
     }
 }
 

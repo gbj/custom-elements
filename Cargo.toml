@@ -17,5 +17,8 @@ js-sys = "0.3"
 version = "0.3"
 features = [
   "HtmlElement",
-  "Node"
+  "Node",
+  "ShadowRoot",
+  "ShadowRootInit",
+  "ShadowRootMode"
 ]
