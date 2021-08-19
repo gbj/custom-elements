@@ -18,16 +18,16 @@ pub trait CustomElement: Default {
         Box::new(|_, _, _, _| ())
     }
 
-    fn connected_callback() -> Box<dyn FnMut(&Self, HtmlElement)> {
-        Box::new(|_, _| ())
+    fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+        Box::new(|_| ())
     }
 
-    fn disconnected_callback() -> Box<dyn FnMut(&Self, HtmlElement)> {
-        Box::new(|_, _| ())
+    fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+        Box::new(|_| ())
     }
 
-    fn adopted_callback() -> Box<dyn FnMut(&Self, HtmlElement)> {
-        Box::new(|_, _| ())
+    fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+        Box::new(|_| ())
     }
 
     fn define(tag_name: &'static str) {
@@ -35,11 +35,41 @@ pub trait CustomElement: Default {
         let constructor = Closure::wrap(Box::new(|this: HtmlElement| {
             let mut component = Self::default();
 
+            // connectedCallback
+            let connected = Closure::wrap(component.connected_callback());
+            js_sys::Reflect::set(
+                &this,
+                &JsValue::from_str("_connectedCallback"),
+                &connected.as_ref().unchecked_ref(),
+            )
+            .unwrap();
+            connected.forget();
+
+            // disconnectedCallback
+            let disconnected = Closure::wrap(component.disconnected_callback());
+            js_sys::Reflect::set(
+                &this,
+                &JsValue::from_str("_disconnectedCallback"),
+                &disconnected.as_ref().unchecked_ref(),
+            )
+            .unwrap();
+            disconnected.forget();
+
+            // adoptedCallback
+            let adopted = Closure::wrap(component.adopted_callback());
+            js_sys::Reflect::set(
+                &this,
+                &JsValue::from_str("_adoptedCallback"),
+                &adopted.as_ref().unchecked_ref(),
+            )
+            .unwrap();
+            adopted.forget();
+
             // attributeChangedCallback
             let attribute_changed = Closure::wrap(component.attribute_changed_callback());
             js_sys::Reflect::set(
                 &this,
-                &JsValue::from_str("_attributeChanged"),
+                &JsValue::from_str("_attributeChangedCallback"),
                 &attribute_changed.as_ref().unchecked_ref(),
             )
             .unwrap();
@@ -64,33 +94,7 @@ pub trait CustomElement: Default {
 }
 
 // JavaScript shim
-#[wasm_bindgen(
-    inline_js = r#"export function make_custom_element(tag_name, shadow, buildElement, observedAttributes, attributeChangedCallback) {
-  customElements.define(tag_name, class extends HTMLElement {
-      static get observedAttributes() { return observedAttributes; }
-
-      constructor() {
-          super();
-        
-          if(shadow) this.attachShadow({ mode: 'open' });
-
-          this.element = this;
-
-          const el = buildElement(this);
-          
-          if(shadow) {
-            this.shadowRoot.appendChild(el);
-          } else {
-            this.appendChild(el);
-          }
-      }
-
-      attributeChangedCallback(name, oldValue, newValue) {
-        this._attributeChanged(this, name, oldValue || "", newValue);
-      }
-  });
-}"#
-)]
+#[wasm_bindgen(module = "/src/make_custom_element.js")]
 extern "C" {
     fn make_custom_element(
         tag_name: &str,
