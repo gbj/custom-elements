@@ -45,7 +45,7 @@ pub trait CustomElement: Default + 'static {
     fn adopted_callback(&self, _this: &HtmlElement) {}
 
     /// Invoked each time one of the custom element's attributes is added, removed, or changed.
-    /// Which attributes to notice change for is specified in [observed_attributes](CustomElement::observed_attributes).
+    /// To observe an attribute, include it in [observed_attributes](CustomElement::observed_attributes).
     fn attribute_changed_callback(
         &self,
         _this: &HtmlElement,
