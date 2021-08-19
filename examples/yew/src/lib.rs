@@ -68,11 +68,4 @@ impl Default for ComponentWrapper {
 #[wasm_bindgen]
 pub fn run() {
     ComponentWrapper::define("ce-yew");
-
-    let document = window().unwrap().document().unwrap();
-    let body = document.query_selector("body").unwrap().unwrap();
-    let el_1 = document.create_element("ce-yew").unwrap();
-    let el_2 = document.create_element("ce-yew").unwrap();
-    body.append_child(&el_1).unwrap();
-    body.append_child(&el_2).unwrap();
 }

@@ -78,22 +78,6 @@ pub fn run() -> Result<(), JsValue> {
     // define the Custom Element
     MyWebComponent::define("ce-vanilla");
 
-    let window = window().unwrap();
-    let document = window.document().unwrap();
-
-    let el_1 = document.create_element("ce-vanilla")?;
-
-    let el_2 = document.create_element("ce-vanilla")?;
-    el_2.set_attribute("name", "Alice")?;
-
-    let el_3 = document.create_element("ce-vanilla")?;
-    el_3.set_attribute("name", "Bob")?;
-
-    let body = document.body().unwrap();
-    body.append_child(&el_1)?;
-    body.append_child(&el_2)?;
-    body.append_child(&el_3)?;
-
     Ok(())
 }
 
