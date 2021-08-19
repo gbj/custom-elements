@@ -20,11 +20,11 @@ impl ComponentWrapper {
     fn new() -> Self {
         yew::initialize();
         let document = window().unwrap().document().unwrap();
-        let el = document.create_element("div").unwrap();
+        let fragment = document.create_document_fragment();
         let app = App::<Model>::new();
-        let scope = app.mount(el.clone());
+        let scope = app.mount(fragment.clone().unchecked_into());
         yew::run_loop();
-        let node = el.unchecked_into();
+        let node = fragment.unchecked_into();
 
         Self { node, scope }
     }

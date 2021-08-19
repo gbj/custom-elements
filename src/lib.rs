@@ -1,35 +1,99 @@
 use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{HtmlElement, Node};
 
+/// A custom DOM element that can be reused via the Web Components/Custom Elements standard.
 pub trait CustomElement: Default {
+    /// Returns a root [Node][web_sys::Node] that will be appended to the custom element.
+    /// Depending on your component, this will probably do some kind of initialization or rendering.
     fn to_node(&mut self) -> Node;
 
+    /// Whether a [Shadow DOM](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_shadow_DOM)
+    /// should be attached to the element or not. Shadow DOM encapsulates styles, but makes some DOM manipulation more difficult.
+    ///
+    /// Defaults to `true`.
     fn shadow() -> bool {
         true
     }
 
+    /// The names of the attributes whose changes should be observed. If an attribute name is in this list,
+    /// [attribute_changed_callback](CustomElement::attribute_changed_callback) will be invoked when it changes.
+    /// If it is not, nothing will happen when the DOM attribute changes.
+    ///
+    /// ```
+    /// fn observed_attributes() -> Vec<&'static str> {
+    ///    vec!["name"]
+    /// }
+    /// ```
     fn observed_attributes() -> Vec<&'static str> {
         Vec::new()
     }
 
+    /// Invoked each time the custom element is appended into a document-connected element.
+    /// This will happen each time the node is moved, and may happen before the element's contents have been fully parsed.
+    ///
+    /// The argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
+    ///
+    /// ```
+    /// fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+    ///		Box::new(|_this: HtmlElement| log("connected"))
+    /// }
+    /// ```
+    fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+        Box::new(|_| ())
+    }
+
+    /// Invoked each time the custom element is disconnected from the document's DOM.
+    ///
+    /// The argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
+    ///
+    /// ```
+    /// fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+    ///		Box::new(|_this: HtmlElement| log("disconnected"))
+    /// }
+    /// ```
+    fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+        Box::new(|_| ())
+    }
+
+    /// Invoked each time the custom element is moved to a new document.
+    ///
+    /// The argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
+    ///
+    /// ```
+    /// fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+    ///		Box::new(|_this: HtmlElement| log("adopted"))
+    /// }
+    /// ```
+    fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
+        Box::new(|_| ())
+    }
+
+    /// Invoked each time one of the custom element's attributes is added, removed, or changed.
+    /// Which attributes to notice change for is specified in [observed_attributes](CustomElement::observed_attributes).
+    ///
+    /// The first argument is the [HtmlElement](web_sys::HtmlElement) for the custom element itself.
+    ///
+    /// The second, third, and fourth arguments are the name of the attribute that has been changed, its old value, and its new value.
+    ///
+    /// ```
+    /// fn attribute_changed_callback(
+    ///    &self,
+    ///) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
+    ///    let node = self.name_node.clone();
+    ///    Box::new(move |_this, name, _old_value, new_value| {
+    ///        if name == "name" {
+    ///            node.set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
+    ///        }
+    ///    })
+    /// }
+    /// ```
     fn attribute_changed_callback(
         &self,
     ) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
         Box::new(|_, _, _, _| ())
     }
 
-    fn connected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_| ())
-    }
-
-    fn disconnected_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_| ())
-    }
-
-    fn adopted_callback(&self) -> Box<dyn FnMut(HtmlElement)> {
-        Box::new(|_| ())
-    }
-
+    ///
     fn define(tag_name: &'static str) {
         // constructor function will be called for each new instance of the component
         let constructor = Closure::wrap(Box::new(|this: HtmlElement| {

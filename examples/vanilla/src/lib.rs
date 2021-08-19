@@ -50,8 +50,10 @@ impl CustomElement for MyWebComponent {
         &self,
     ) -> Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)> {
         let node = self.name_node.clone();
-        Box::new(move |_this, _name, _old_value, new_value| {
-            node.set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
+        Box::new(move |_this, name, _old_value, new_value| {
+            if name == "name" {
+                node.set_data(&new_value.unwrap_or_else(|| "friend".to_string()));
+            }
         })
     }
 
