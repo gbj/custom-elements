@@ -34,7 +34,8 @@
 
 use std::sync::{Arc, Mutex};
 
-use wasm_bindgen::{prelude::*, JsCast};
+use wasm_bindgen::prelude::*;
+use wasm_bindgen::UnwrapThrowExt;
 use web_sys::{HtmlElement, Node};
 
 /// A custom DOM element that can be reused via the Web Components/Custom Elements standard.
@@ -112,62 +113,58 @@ pub trait CustomElement: Default + 'static {
             let cmp = component.clone();
             let connected = Closure::wrap(Box::new({
                 move |el| {
-                    let mut lock = cmp.lock().unwrap();
+                    let mut lock = cmp.lock().unwrap_throw();
                     lock.connected_callback(&el);
                 }
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_connectedCallback"),
-                &connected.as_ref().unchecked_ref(),
+                &connected.into_js_value(),
             )
-            .unwrap();
-            connected.forget();
+            .unwrap_throw();
 
             // disconnectedCallback
             let cmp = component.clone();
             let disconnected = Closure::wrap(Box::new(move |el| {
-                let mut lock = cmp.lock().unwrap();
+                let mut lock = cmp.lock().unwrap_throw();
                 lock.disconnected_callback(&el);
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_disconnectedCallback"),
-                &disconnected.as_ref().unchecked_ref(),
+                &disconnected.into_js_value(),
             )
-            .unwrap();
-            disconnected.forget();
+            .unwrap_throw();
 
             // adoptedCallback
             let cmp = component.clone();
             let adopted = Closure::wrap(Box::new(move |el| {
-                let mut lock = cmp.lock().unwrap();
+                let mut lock = cmp.lock().unwrap_throw();
                 lock.adopted_callback(&el);
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_adoptedCallback"),
-                &adopted.as_ref().unchecked_ref(),
+                &adopted.into_js_value(),
             )
-            .unwrap();
-            adopted.forget();
+            .unwrap_throw();
 
             // attributeChangedCallback
             let cmp = component.clone();
             let attribute_changed = Closure::wrap(Box::new(move |el, name, old_value, new_value| {
-                let mut lock = cmp.lock().unwrap();
+                let mut lock = cmp.lock().unwrap_throw();
                 lock.attribute_changed_callback(&el, name, old_value, new_value);
             })
                 as Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)>);
             js_sys::Reflect::set(
                 &this,
                 &JsValue::from_str("_attributeChangedCallback"),
-                &attribute_changed.as_ref().unchecked_ref(),
+                &attribute_changed.into_js_value(),
             )
-            .unwrap();
-            attribute_changed.forget();
+            .unwrap_throw();
 
-            let mut lock = component.lock().unwrap();
+            let mut lock = component.lock().unwrap_throw();
             lock.to_node()
         }) as Box<dyn FnMut(HtmlElement) -> Node>);
 
@@ -192,12 +189,11 @@ pub trait CustomElement: Default + 'static {
         make_custom_element(
             tag_name,
             Self::shadow(),
-            &constructor,
+            constructor.into_js_value(),
             observed_attributes,
             Self::style(),
             stylesheets,
         );
-        constructor.forget();
     }
 }
 
@@ -207,7 +203,7 @@ extern "C" {
     fn make_custom_element(
         tag_name: &str,
         shadow: bool,
-        build_element: &Closure<dyn FnMut(HtmlElement) -> web_sys::Node>,
+        build_element: JsValue,
         observed_attributes: JsValue,
         style: Option<&str>,
         stylesheets: JsValue,
