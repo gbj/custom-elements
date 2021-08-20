@@ -1,3 +1,7 @@
+[![Crate](http://meritbadge.herokuapp.com/custom_elements)](https://crates.io/crates/custom_elements)
+
+[![Docs](https://docs.rs/custom_elements/badge.svg)](https://docs.rs/custom_elements)
+
 A framework-agnostic CustomElement trait to create Rust/WASM Web Components/Custom Elements easily without writing any JavaScript.
 
 # Overview
