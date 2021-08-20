@@ -1,7 +1,5 @@
 mod component;
 
-use std::convert::TryInto;
-
 use component::Model;
 use component::Msg;
 use custom_elements::CustomElement;
