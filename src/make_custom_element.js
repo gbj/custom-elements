@@ -17,32 +17,6 @@ export function make_custom_element(
         super();
 
         if (shadow) this.attachShadow({ mode: "open" });
-
-        this.element = this;
-
-        const fragment = document.createDocumentFragment();
-
-        if(style) {
-          const style_el = document.createElement("style");
-          style_el.textContent = style;
-          fragment.appendChild(style_el);
-        }
-
-        for(const url of stylesheets) {
-          const link = document.createElement("link");
-          link.setAttribute("rel", "stylesheet");
-          link.setAttribute("href", url);
-          fragment.appendChild(link);
-        }
-
-        const el = buildElement(this);
-        fragment.appendChild(el);
-
-        if (shadow) {
-          this.shadowRoot.appendChild(fragment);
-        } else {
-          this.appendChild(fragment);
-        }
       }
 
       attributeChangedCallback(name, oldValue, newValue) {
@@ -50,6 +24,35 @@ export function make_custom_element(
       }
 
       connectedCallback() {
+        // on first connection, add children
+        if(!this.hasSetup) {
+          this.hasSetup = true;
+          const fragment = document.createDocumentFragment();
+
+          if(style) {
+            const style_el = document.createElement("style");
+            style_el.textContent = style;
+            fragment.appendChild(style_el);
+          }
+  
+          for(const url of stylesheets) {
+            const link = document.createElement("link");
+            link.setAttribute("rel", "stylesheet");
+            link.setAttribute("href", url);
+            fragment.appendChild(link);
+          }
+  
+          const el = buildElement(this);
+          fragment.appendChild(el);
+  
+          if (shadow) {
+            this.shadowRoot.appendChild(fragment);
+          } else {
+            this.appendChild(fragment);
+          }
+        }
+
+        // otherwise, just run the callback
         this._connectedCallback(this);
       }
 
