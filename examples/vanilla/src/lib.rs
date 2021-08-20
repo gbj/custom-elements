@@ -1,4 +1,4 @@
-use custom_elements::{CustomElement, ShadowDOM};
+use custom_elements::CustomElement;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlElement, Node, Text};
@@ -47,7 +47,7 @@ impl CustomElement for MyWebComponent {
     }
 
     fn attribute_changed_callback(
-        &self,
+        &mut self,
         _this: &HtmlElement,
         name: String,
         _old_value: Option<String>,
