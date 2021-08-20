@@ -59,15 +59,15 @@ impl CustomElement for MyWebComponent {
         }
     }
 
-    fn connected_callback(&self, _this: &HtmlElement) {
+    fn connected_callback(&mut self, _this: &HtmlElement) {
         log("connected");
     }
 
-    fn disconnected_callback(&self, _this: &HtmlElement) {
+    fn disconnected_callback(&mut self, _this: &HtmlElement) {
         log("disconnected");
     }
 
-    fn adopted_callback(&self, _this: &HtmlElement) {
+    fn adopted_callback(&mut self, _this: &HtmlElement) {
         log("adopted");
     }
 

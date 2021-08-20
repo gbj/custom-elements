@@ -44,7 +44,7 @@ impl CustomElement for ComponentWrapper {
     }
 
     fn attribute_changed_callback(
-        &self,
+        &mut self,
         _this: &HtmlElement,
         name: String,
         _old_value: Option<String>,

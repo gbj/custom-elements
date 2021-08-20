@@ -19,7 +19,7 @@ impl CustomElement for MyWebComponent {
     }
 
     fn attribute_changed_callback(
-        &self,
+        &mut self,
         this: &HtmlElement,
         name: String,
         old_value: Option<String>,
@@ -53,20 +53,20 @@ You can implement each of the custom element’s lifecycle callbacks. Each of th
 
 ```rust
 
-fn connected_callback(&self, _this: &HtmlElement) {
+fn connected_callback(&mut self, this: &HtmlElement) {
     log("connected");
 }
 
-fn disconnected_callback(&self, _this: &HtmlElement) {
+fn disconnected_callback(&mut self, this: &HtmlElement) {
     log("disconnected");
 }
 
-fn adopted_callback(&self, _this: &HtmlElement) {
+fn adopted_callback(&mut self, this: &HtmlElement) {
     log("adopted");
 }
 
 fn attribute_changed_callback(
-    &self,
+    &mut self,
     this: &HtmlElement,
     name: String,
     old_value: Option<String>,

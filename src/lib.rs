@@ -38,6 +38,9 @@ use wasm_bindgen::{prelude::*, JsCast};
 use web_sys::{HtmlElement, Node};
 
 /// A custom DOM element that can be reused via the Web Components/Custom Elements standard.
+///
+/// Note that your component should implement [Default][std::default::Default], which allows the
+/// browser to initialize a “default” blank component when a new custom element node is created.
 pub trait CustomElement: Default + 'static {
     /// Returns a root [Node][web_sys::Node] that will be appended to the custom element.
     /// Depending on your component, this will probably do some kind of initialization or rendering.
@@ -60,18 +63,18 @@ pub trait CustomElement: Default + 'static {
 
     /// Invoked each time the custom element is appended into a document-connected element.
     /// This will happen each time the node is moved, and may happen before the element's contents have been fully parsed.
-    fn connected_callback(&self, _this: &HtmlElement) {}
+    fn connected_callback(&mut self, _this: &HtmlElement) {}
 
     /// Invoked each time the custom element is disconnected from the document's DOM.
-    fn disconnected_callback(&self, _this: &HtmlElement) {}
+    fn disconnected_callback(&mut self, _this: &HtmlElement) {}
 
     /// Invoked each time the custom element is moved to a new document.
-    fn adopted_callback(&self, _this: &HtmlElement) {}
+    fn adopted_callback(&mut self, _this: &HtmlElement) {}
 
     /// Invoked each time one of the custom element's attributes is added, removed, or changed.
     /// To observe an attribute, include it in [observed_attributes](CustomElement::observed_attributes).
     fn attribute_changed_callback(
-        &self,
+        &mut self,
         _this: &HtmlElement,
         _name: String,
         _old_value: Option<String>,
@@ -109,7 +112,7 @@ pub trait CustomElement: Default + 'static {
             let cmp = component.clone();
             let connected = Closure::wrap(Box::new({
                 move |el| {
-                    let lock = cmp.lock().unwrap();
+                    let mut lock = cmp.lock().unwrap();
                     lock.connected_callback(&el);
                 }
             }) as Box<dyn FnMut(HtmlElement)>);
@@ -124,7 +127,7 @@ pub trait CustomElement: Default + 'static {
             // disconnectedCallback
             let cmp = component.clone();
             let disconnected = Closure::wrap(Box::new(move |el| {
-                let lock = cmp.lock().unwrap();
+                let mut lock = cmp.lock().unwrap();
                 lock.disconnected_callback(&el);
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
@@ -138,7 +141,7 @@ pub trait CustomElement: Default + 'static {
             // adoptedCallback
             let cmp = component.clone();
             let adopted = Closure::wrap(Box::new(move |el| {
-                let lock = cmp.lock().unwrap();
+                let mut lock = cmp.lock().unwrap();
                 lock.adopted_callback(&el);
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
@@ -152,7 +155,7 @@ pub trait CustomElement: Default + 'static {
             // attributeChangedCallback
             let cmp = component.clone();
             let attribute_changed = Closure::wrap(Box::new(move |el, name, old_value, new_value| {
-                let lock = cmp.lock().unwrap();
+                let mut lock = cmp.lock().unwrap();
                 lock.attribute_changed_callback(&el, name, old_value, new_value);
             })
                 as Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)>);
