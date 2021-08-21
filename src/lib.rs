@@ -36,16 +36,18 @@ use std::sync::{Arc, Mutex};
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::UnwrapThrowExt;
-use web_sys::{HtmlElement, Node};
+use web_sys::{window, HtmlElement};
 
 /// A custom DOM element that can be reused via the Web Components/Custom Elements standard.
 ///
 /// Note that your component should implement [Default][std::default::Default], which allows the
 /// browser to initialize a “default” blank component when a new custom element node is created.
 pub trait CustomElement: Default + 'static {
-    /// Returns a root [Node][web_sys::Node] that will be appended to the custom element.
-    /// Depending on your component, this will probably do some kind of initialization or rendering.
-    fn to_node(&mut self) -> Node;
+    /// Appends children to the root element, either to the shadow root in shadow mode or to the custom element itself.
+    /// Per the [Web Components spec](https://html.spec.whatwg.org/multipage/custom-elements.html#custom-element-conformance),
+    /// this is deferred to the first invocation of `connectedCallback()`.
+    /// It will run before [connected_callback](CustomElement::connected_callback).
+    fn inject_children(&mut self, this: &HtmlElement);
 
     /// Whether a [Shadow root](https://developer.mozilla.org/en-US/docs/Web/Web_Components/Using_shadow_DOM)
     /// should be attached to the element or not. Shadow DOM encapsulates styles, but makes some DOM manipulation more difficult.
@@ -58,9 +60,13 @@ pub trait CustomElement: Default + 'static {
     /// The names of the attributes whose changes should be observed. If an attribute name is in this list,
     /// [attribute_changed_callback](CustomElement::attribute_changed_callback) will be invoked when it changes.
     /// If it is not, nothing will happen when the DOM attribute changes.
-    fn observed_attributes() -> Vec<&'static str> {
-        Vec::new()
+    fn observed_attributes() -> &'static [&'static str] {
+        &[]
     }
+
+    /// Invoked when the custom element is instantiated. This can be used to inject any code into the `constructor`,
+    /// immediately after it calls `super()`.
+    fn constructor(&mut self, _this: &HtmlElement) {}
 
     /// Invoked each time the custom element is appended into a document-connected element.
     /// This will happen each time the node is moved, and may happen before the element's contents have been fully parsed.
@@ -83,16 +89,6 @@ pub trait CustomElement: Default + 'static {
     ) {
     }
 
-    /// CSS stylesheet to be attached to the element as a `<style>` tag.
-    fn style() -> Option<&'static str> {
-        None
-    }
-
-    /// URLs for CSS stylesheets to be attached to the element as `<link>` tags.
-    fn style_urls() -> Vec<&'static str> {
-        Vec::new()
-    }
-
     /// Must be called somewhere to define the custom element and register it with the DOM Custom Elements Registry.
     ///
     /// Note that custom element names must contain a hyphen.
@@ -108,6 +104,36 @@ pub trait CustomElement: Default + 'static {
         // constructor function will be called for each new instance of the component
         let constructor = Closure::wrap(Box::new(move |this: HtmlElement| {
             let component = Arc::new(Mutex::new(Self::default()));
+
+            // constructor
+            let cmp = component.clone();
+            let constructor = Closure::wrap(Box::new({
+                move |el| {
+                    let mut lock = cmp.lock().unwrap_throw();
+                    lock.constructor(&el);
+                }
+            }) as Box<dyn FnMut(HtmlElement)>);
+            js_sys::Reflect::set(
+                &this,
+                &JsValue::from_str("_constructor"),
+                &constructor.into_js_value(),
+            )
+            .unwrap_throw();
+
+            // inject_children
+            let cmp = component.clone();
+            let inject_children = Closure::wrap(Box::new({
+                move |el| {
+                    let mut lock = cmp.lock().unwrap_throw();
+                    lock.inject_children(&el);
+                }
+            }) as Box<dyn FnMut(HtmlElement)>);
+            js_sys::Reflect::set(
+                &this,
+                &JsValue::from_str("_injectChildren"),
+                &inject_children.into_js_value(),
+            )
+            .unwrap_throw();
 
             // connectedCallback
             let cmp = component.clone();
@@ -151,7 +177,7 @@ pub trait CustomElement: Default + 'static {
             .unwrap_throw();
 
             // attributeChangedCallback
-            let cmp = component.clone();
+            let cmp = component;
             let attribute_changed = Closure::wrap(Box::new(move |el, name, old_value, new_value| {
                 let mut lock = cmp.lock().unwrap_throw();
                 lock.attribute_changed_callback(&el, name, old_value, new_value);
@@ -163,23 +189,12 @@ pub trait CustomElement: Default + 'static {
                 &attribute_changed.into_js_value(),
             )
             .unwrap_throw();
-
-            let mut lock = component.lock().unwrap_throw();
-            lock.to_node()
-        }) as Box<dyn FnMut(HtmlElement) -> Node>);
+        }) as Box<dyn FnMut(HtmlElement)>);
 
         // observedAttributes is static and needs to be known when the class is defined
         let attributes = Self::observed_attributes();
         let observed_attributes = JsValue::from(
             attributes
-                .iter()
-                .map(|attr| JsValue::from_str(attr))
-                .collect::<js_sys::Array>(),
-        );
-
-        // styles
-        let stylesheets = JsValue::from(
-            Self::style_urls()
                 .iter()
                 .map(|attr| JsValue::from_str(attr))
                 .collect::<js_sys::Array>(),
@@ -191,10 +206,41 @@ pub trait CustomElement: Default + 'static {
             Self::shadow(),
             constructor.into_js_value(),
             observed_attributes,
-            Self::style(),
-            stylesheets,
         );
     }
+}
+
+/// Attaches a `<style>` element with the given content to the element,
+/// either to its shadow root (if it exists) or to the custom element itself.
+pub fn inject_style(this: &HtmlElement, style: &str) {
+    let style_el = window()
+        .unwrap_throw()
+        .document()
+        .unwrap_throw()
+        .create_element("style")
+        .unwrap_throw();
+    style_el.set_inner_html(style);
+    match this.shadow_root() {
+        Some(shadow_root) => shadow_root.append_child(&style_el).unwrap_throw(),
+        None => this.append_child(&style_el).unwrap_throw(),
+    };
+}
+
+/// Attaches a `<link rel="stylesheet">` element with the given URL to the custom element,
+/// either to its shadow root (if it exists) or to the custom element itself.
+pub fn inject_stylesheet(this: &HtmlElement, url: &str) {
+    let style_el = window()
+        .unwrap_throw()
+        .document()
+        .unwrap_throw()
+        .create_element("link")
+        .unwrap_throw();
+    style_el.set_attribute("rel", "stylesheet").unwrap_throw();
+    style_el.set_attribute("href", url).unwrap_throw();
+    match this.shadow_root() {
+        Some(shadow_root) => shadow_root.append_child(&style_el).unwrap_throw(),
+        None => this.append_child(&style_el).unwrap_throw(),
+    };
 }
 
 // JavaScript shim
@@ -203,9 +249,7 @@ extern "C" {
     fn make_custom_element(
         tag_name: &str,
         shadow: bool,
-        build_element: JsValue,
+        constructor: JsValue,
         observed_attributes: JsValue,
-        style: Option<&str>,
-        stylesheets: JsValue,
     );
 }

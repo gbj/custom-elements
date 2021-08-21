@@ -1,4 +1,4 @@
-use custom_elements::CustomElement;
+use custom_elements::{inject_style, CustomElement};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlElement, Node, Text};
@@ -38,12 +38,14 @@ impl Default for MyWebComponent {
 
 // Here's the interesting part: configuring the Custom Element
 impl CustomElement for MyWebComponent {
-    fn to_node(&mut self) -> Node {
-        self.view()
+    fn inject_children(&mut self, this: &HtmlElement) {
+        inject_style(&this, "p { color: green; }");
+        let node = self.view();
+        this.append_child(&node).unwrap_throw();
     }
 
-    fn observed_attributes() -> Vec<&'static str> {
-        vec!["name"]
+    fn observed_attributes() -> &'static [&'static str] {
+        &["name"]
     }
 
     fn attribute_changed_callback(
@@ -69,10 +71,6 @@ impl CustomElement for MyWebComponent {
 
     fn adopted_callback(&mut self, _this: &HtmlElement) {
         log("adopted");
-    }
-
-    fn style() -> Option<&'static str> {
-        Some("p { color: green; }")
     }
 }
 
