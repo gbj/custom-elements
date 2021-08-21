@@ -13,25 +13,39 @@ This crate provides a `CustomElement` trait that, when implemented, allows you t
 
 ```rust
 impl CustomElement for MyWebComponent {
-    fn to_node(&mut self) -> Node {
-        self.view()
-    }
+  fn inject_children(&mut self, this: &HtmlElement) {
+      inject_style(&this, "p { color: green; }");
+      let node = self.view();
+      this.append_child(&node).unwrap_throw();
+  }
 
-    fn observed_attributes() -> Vec<&'static str> {
-        vec!["name"]
-    }
+  fn observed_attributes() -> &'static [&'static str] {
+      &["name"]
+  }
 
-    fn attribute_changed_callback(
-        &mut self,
-        this: &HtmlElement,
-        name: String,
-        old_value: Option<String>,
-        new_value: Option<String>,
-    ) {
-        if name == "name" {
-            // do something
-        }
-    }
+  fn attribute_changed_callback(
+      &mut self,
+      _this: &HtmlElement,
+      name: String,
+      _old_value: Option<String>,
+      new_value: Option<String>,
+  ) {
+      if name == "name" {
+          /* do something... */
+      }
+  }
+
+  fn connected_callback(&mut self, _this: &HtmlElement) {
+      log("connected");
+  }
+
+  fn disconnected_callback(&mut self, _this: &HtmlElement) {
+      log("disconnected");
+  }
+
+  fn adopted_callback(&mut self, _this: &HtmlElement) {
+      log("adopted");
+  }
 }
 
 #[wasm_bindgen]
@@ -83,9 +97,13 @@ fn attribute_changed_callback(
 
 ## Using Rust Frameworks
 
-The minimum needed to implement `CustomElement` is some way to get a `web_sys::Node` from your component. It’s also generally helpful to have it respond to changes in its attributes via the `attribute_changed_callback`. Depending on the framework, these may be more or less difficult to accomplish; in particular, for Elm-inspired frameworks you may need to create a wrapper that owns some way of updating the app’s state.
+The minimum needed to implement `CustomElement` is some way to inject children into the custom element. It’s also generally helpful to have it respond to changes in its attributes via the `attribute_changed_callback`. Depending on the framework, these may be more or less difficult to accomplish; in particular, for Elm-inspired frameworks you may need to create a wrapper that owns some way of updating the app’s state.
 
 See the Yew example for an example of how to work with a framework’s API.
+
+## Customized built-in elements
+
+Custom elements can either be autonomous (`<my-component></my-component>`) or customized built-in elements (`<p is="my-paragraph-component"></p>). This crate offers support for creating customized built-in elements via the `[superclass](https://docs.rs/custom-elements/0.2.0/custom_elements/trait.CustomElement.html#method.superclass)` method.
 
 # Resources
 
