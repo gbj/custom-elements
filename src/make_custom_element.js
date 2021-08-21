@@ -1,12 +1,16 @@
 export function make_custom_element(
+  superclass,
   tag_name,
   shadow,
   constructor,
-  observedAttributes
+  observedAttributes,
+  superclassTag
 ) {
+  console.log('superclass = ', superclass, tag_name, shadow, constructor, observedAttributes, superclassTag);
+
   customElements.define(
     tag_name,
-    class extends HTMLElement {
+    class extends superclass {
       static get observedAttributes() {
         return observedAttributes;
       }
@@ -49,6 +53,7 @@ export function make_custom_element(
       adoptedCallback() {
         this._adoptedCallback(this);
       }
-    }
+    },
+    superclassTag ? { extends: superclassTag } : undefined
   );
 }
