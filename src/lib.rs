@@ -46,7 +46,8 @@
 //! }
 //! ```
 
-use std::sync::{Arc, Mutex};
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::UnwrapThrowExt;
@@ -140,14 +141,13 @@ pub trait CustomElement: Default + 'static {
     fn define(tag_name: &'static str) {
         // constructor function will be called for each new instance of the component
         let constructor = Closure::wrap(Box::new(move |this: HtmlElement| {
-            let component = Arc::new(Mutex::new(Self::default()));
+            let component = Rc::new(RefCell::new(Self::default()));
 
             // constructor
             let cmp = component.clone();
             let constructor = Closure::wrap(Box::new({
                 move |el| {
-                    let mut lock = cmp.lock().unwrap_throw();
-                    lock.constructor(&el);
+                    cmp.borrow_mut().constructor(&el);
                 }
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
@@ -161,8 +161,7 @@ pub trait CustomElement: Default + 'static {
             let cmp = component.clone();
             let inject_children = Closure::wrap(Box::new({
                 move |el| {
-                    let mut lock = cmp.lock().unwrap_throw();
-                    lock.inject_children(&el);
+                    cmp.borrow_mut().inject_children(&el);
                 }
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
@@ -176,8 +175,7 @@ pub trait CustomElement: Default + 'static {
             let cmp = component.clone();
             let connected = Closure::wrap(Box::new({
                 move |el| {
-                    let mut lock = cmp.lock().unwrap_throw();
-                    lock.connected_callback(&el);
+                    cmp.borrow_mut().connected_callback(&el);
                 }
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
@@ -190,8 +188,7 @@ pub trait CustomElement: Default + 'static {
             // disconnectedCallback
             let cmp = component.clone();
             let disconnected = Closure::wrap(Box::new(move |el| {
-                let mut lock = cmp.lock().unwrap_throw();
-                lock.disconnected_callback(&el);
+                cmp.borrow_mut().disconnected_callback(&el);
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
                 &this,
@@ -203,8 +200,7 @@ pub trait CustomElement: Default + 'static {
             // adoptedCallback
             let cmp = component.clone();
             let adopted = Closure::wrap(Box::new(move |el| {
-                let mut lock = cmp.lock().unwrap_throw();
-                lock.adopted_callback(&el);
+                cmp.borrow_mut().adopted_callback(&el);
             }) as Box<dyn FnMut(HtmlElement)>);
             js_sys::Reflect::set(
                 &this,
@@ -216,8 +212,8 @@ pub trait CustomElement: Default + 'static {
             // attributeChangedCallback
             let cmp = component;
             let attribute_changed = Closure::wrap(Box::new(move |el, name, old_value, new_value| {
-                let mut lock = cmp.lock().unwrap_throw();
-                lock.attribute_changed_callback(&el, name, old_value, new_value);
+                cmp.borrow_mut()
+                    .attribute_changed_callback(&el, name, old_value, new_value);
             })
                 as Box<dyn FnMut(HtmlElement, String, Option<String>, Option<String>)>);
             js_sys::Reflect::set(
