@@ -6,7 +6,7 @@ export function make_custom_element(
   observedAttributes,
   superclassTag
 ) {
-  console.log('superclass = ', superclass, tag_name, shadow, constructor, observedAttributes, superclassTag);
+  //console.log('superclass = ', superclass, tag_name, shadow, constructor, observedAttributes, superclassTag);
 
   customElements.define(
     tag_name,
