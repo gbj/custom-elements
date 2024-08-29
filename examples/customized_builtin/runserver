@@ -1,11 +1,20 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
-import BaseHTTPServer
-import SimpleHTTPServer
-SimpleHTTPServer.SimpleHTTPRequestHandler.extensions_map['.wasm'] = 'application/wasm'
-port = 8000
-httpd = BaseHTTPServer.HTTPServer(('localhost', 8000), SimpleHTTPServer.SimpleHTTPRequestHandler)
+import http.server
+from http.server import HTTPServer, BaseHTTPRequestHandler
+import socketserver
 
-print "Now serving at http://localhost:8000"
+PORT = 8000
 
+Handler = http.server.SimpleHTTPRequestHandler
+
+Handler.extensions_map={
+    '.html': 'text/html',
+    '.wasm':  'application/wasm',
+    '': 'text/html', # Default is 'application/octet-stream'
+    }
+
+httpd = socketserver.TCPServer(("", PORT), Handler)
+
+print("serving at port", PORT)
 httpd.serve_forever()
