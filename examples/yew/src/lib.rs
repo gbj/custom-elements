@@ -1,69 +1,81 @@
 mod component;
 
-use component::Model;
-use component::Msg;
-use custom_elements::{inject_stylesheet, CustomElement, GenericCustomElement};
+use crate::component::Model;
+use custom_elements::{inject_stylesheet, GenericCustomElement, HtmlElementConstructor};
 use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
-use web_sys::{window, HtmlElement};
-use yew::html::Scope;
+use web_sys::HtmlElement;
 use yew::prelude::*;
+use yew::Renderer;
 
-struct ComponentWrapper {
-    scope: Option<Scope<Model>>,
+pub struct GenericComponentWrapper<T: BaseComponent> {
+    component: Option<AppHandle<T>>,
+    props_builder: Box<dyn Fn(&HtmlElement) -> T::Properties>,
+    attribute_changed_message_builder:
+        Box<dyn Fn(String, Option<String>, Option<String>) -> Option<T::Message>>,
+    stylesheet: Option<&'static str>,
+    queue: Vec<T::Message>,
 }
 
-impl ComponentWrapper {
-    fn new() -> Self {
-        Self { scope: None }
+impl<T: BaseComponent> GenericComponentWrapper<T> {
+    pub fn new(
+        props_builder: Box<dyn Fn(&HtmlElement) -> T::Properties>,
+        attribute_changed_message_builder: Box<
+            dyn Fn(String, Option<String>, Option<String>) -> Option<T::Message>,
+        >,
+        stylesheet: Option<&'static str>,
+    ) -> Self {
+        Self {
+            component: None,
+            props_builder,
+            attribute_changed_message_builder,
+            stylesheet,
+            queue: vec![],
+        }
     }
 }
 
-impl GenericCustomElement for ComponentWrapper {
+impl<T: BaseComponent> GenericCustomElement for GenericComponentWrapper<T> {
     fn inject_children(&mut self, this: &HtmlElement) {
-        yew::initialize();
-        let app = App::<Model>::new();
-        let scope = app.mount(this.clone().unchecked_into());
-        self.scope = Some(scope);
-        yew::run_loop();
+        let app =
+            Renderer::<T>::with_root_and_props(this.clone().into(), (self.props_builder)(this));
 
-        inject_stylesheet(&this, "/component_style.css");
+        let component = app.render();
+        while !self.queue.is_empty() {
+            let next_entry = self.queue.remove(0);
+            component.send_message(next_entry);
+        }
+        self.component = Some(component);
+        if let Some(stylesheet) = self.stylesheet {
+            inject_stylesheet(this, stylesheet);
+        }
     }
+
     fn attribute_changed_callback(
         &mut self,
         _this: &HtmlElement,
         name: String,
-        _old_value: Option<String>,
+        old_value: Option<String>,
         new_value: Option<String>,
     ) {
-        match name.as_str() {
-            "value" => {
-                if let Some(value) = new_value {
-                    if let Ok(value) = value.parse::<i64>() {
-                        if let Some(scope) = &self.scope {
-                            scope.send_message(Msg::Set(value));
-                        }
-                    }
-                }
+        if let Some(msg) = (self.attribute_changed_message_builder)(name, old_value, new_value) {
+            if let Some(handle) = &self.component {
+                handle.send_message(msg);
+            } else {
+                self.queue.push(msg);
             }
-            _ => (),
-        };
-    }
-}
-
-impl CustomElement for ComponentWrapper {
-    fn observed_attributes() -> &'static [&'static str] {
-        &["value"]
-    }
-}
-
-impl Default for ComponentWrapper {
-    fn default() -> Self {
-        Self::new()
+        }
     }
 }
 
 #[wasm_bindgen]
 pub fn run() {
-    ComponentWrapper::define("ce-yew");
+    custom_elements::define_custom_tag(
+        "ce-yew",
+        move || {
+            GenericComponentWrapper::<Model>::new(Box::new(|_| ()), Box::new(|_, _, _| None), None)
+        },
+        || (None, &HtmlElementConstructor),
+        &["group"],
+        false,
+    );
 }
