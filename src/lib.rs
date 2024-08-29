@@ -4,16 +4,28 @@
 //!
 //! This crate provides a [CustomElement][CustomElement] trait that, when implemented, allows you to encapsulate any Rust structure as a reusable web component without writing any JavaScript. In theory it should be usable with any Rust front-end framework.
 //! ```rust
-//! impl CustomElement for MyWebComponent {
+//! use js_sys::Array;
+//! use wasm_bindgen::prelude::wasm_bindgen;
+//! use wasm_bindgen::UnwrapThrowExt;
+//! use web_sys::console::log;
+//! use web_sys::HtmlElement;
+//!
+//! use custom_elements::{inject_style, CustomElement, GenericCustomElement};
+//!#[derive(Default)]
+//! struct MyWebComponent;
+//! impl MyWebComponent{
+//!     fn view(&self)->HtmlElement{
+//!         todo!()
+//!     }
+//! }
+//!
+//! impl GenericCustomElement for MyWebComponent {
 //!   fn inject_children(&mut self, this: &HtmlElement) {
 //!       inject_style(&this, "p { color: green; }");
 //!       let node = self.view();
 //!       this.append_child(&node).unwrap_throw();
 //!   }
 //!
-//!   fn observed_attributes() -> &'static [&'static str] {
-//!       &["name"]
-//!   }
 //!
 //!   fn attribute_changed_callback(
 //!       &mut self,
@@ -28,15 +40,20 @@
 //!   }
 //!
 //!   fn connected_callback(&mut self, _this: &HtmlElement) {
-//!       log("connected");
+//!       log(&Array::of1(&"connected".into()));
 //!   }
 //!
 //!   fn disconnected_callback(&mut self, _this: &HtmlElement) {
-//!       log("disconnected");
+//!       log(&Array::of1(&"disconnected".into()));
 //!   }
 //!
 //!   fn adopted_callback(&mut self, _this: &HtmlElement) {
-//!       log("adopted");
+//!       log(&Array::of1(&"adopted".into()));
+//!   }
+//! }
+//! impl CustomElement for MyWebComponent{
+//!   fn observed_attributes() -> &'static [&'static str] {
+//!       &["name"]
 //!   }
 //! }
 //!
@@ -113,11 +130,25 @@ pub trait CustomElement: GenericCustomElement + Default {
     ///
     /// To specify your own superclass, import it using `wasm_bindgen`:
     /// ```
+    /// use wasm_bindgen::prelude::wasm_bindgen;
+    /// use web_sys::HtmlElement;
+    ///
+    ///
+    /// use custom_elements::{CustomElement, GenericCustomElement};
+    ///
     /// #[wasm_bindgen]
     /// extern "C" {
     ///     #[wasm_bindgen(js_name = HTMLParagraphElement, js_namespace = window)]
     ///     pub static HtmlParagraphElementConstructor: js_sys::Function;
     /// }
+    /// #[derive(Default)]
+    /// struct MyComponent;
+    ///
+    /// impl GenericCustomElement for MyComponent {fn inject_children(&mut self, this: &HtmlElement) {
+    ///         todo!()
+    ///     }}
+    ///
+    ///
     /// impl CustomElement for MyComponent {
     ///     fn superclass() -> (Option<&'static str>, &'static js_sys::Function) {
     ///         (Some("p"), &HtmlParagraphElementConstructor)
@@ -132,7 +163,23 @@ pub trait CustomElement: GenericCustomElement + Default {
     /// Note that custom element names must contain a hyphen.
     ///
     /// ```rust
-    /// impl CustomElement for MyCustomElement { /* ... */}
+    /// use wasm_bindgen::prelude::wasm_bindgen;
+    /// use web_sys::HtmlElement;
+    ///
+    /// use custom_elements::{CustomElement, GenericCustomElement};
+    ///
+    /// #[derive(Default)]
+    ///  struct MyCustomElement;
+    ///
+    ///
+    /// impl GenericCustomElement for MyCustomElement {
+    ///     fn inject_children(&mut self, this: &HtmlElement) {
+    ///         todo!()
+    ///     }
+    /// }
+    ///
+    /// impl CustomElement for MyCustomElement{
+    /// }
     /// #[wasm_bindgen]
     /// pub fn define_elements() {
     ///     MyCustomElement::define("my-component");
