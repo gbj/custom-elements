@@ -2,7 +2,7 @@ mod component;
 
 use component::Model;
 use component::Msg;
-use custom_elements::{inject_stylesheet, CustomElement};
+use custom_elements::{inject_stylesheet, CustomElement, GenericCustomElement};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, HtmlElement};
@@ -19,7 +19,7 @@ impl ComponentWrapper {
     }
 }
 
-impl CustomElement for ComponentWrapper {
+impl GenericCustomElement for ComponentWrapper {
     fn inject_children(&mut self, this: &HtmlElement) {
         yew::initialize();
         let app = App::<Model>::new();
@@ -29,11 +29,6 @@ impl CustomElement for ComponentWrapper {
 
         inject_stylesheet(&this, "/component_style.css");
     }
-
-    fn observed_attributes() -> &'static [&'static str] {
-        &["value"]
-    }
-
     fn attribute_changed_callback(
         &mut self,
         _this: &HtmlElement,
@@ -53,6 +48,12 @@ impl CustomElement for ComponentWrapper {
             }
             _ => (),
         };
+    }
+}
+
+impl CustomElement for ComponentWrapper {
+    fn observed_attributes() -> &'static [&'static str] {
+        &["value"]
     }
 }
 

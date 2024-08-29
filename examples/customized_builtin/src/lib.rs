@@ -1,4 +1,4 @@
-use custom_elements::{inject_style, CustomElement};
+use custom_elements::{inject_style, CustomElement, GenericCustomElement};
 use wasm_bindgen::prelude::*;
 use web_sys::{window, HtmlElement};
 
@@ -23,7 +23,7 @@ impl Default for PurpleParagraph {
 }
 
 // Here's the interesting part: configuring the Custom Element
-impl CustomElement for PurpleParagraph {
+impl GenericCustomElement for PurpleParagraph {
     fn inject_children(&mut self, this: &HtmlElement) {
         inject_style(&this, "* { color: purple; }");
         let slot = window()
@@ -34,7 +34,8 @@ impl CustomElement for PurpleParagraph {
             .unwrap_throw();
         this.append_child(&slot).unwrap_throw();
     }
-
+}
+impl CustomElement for PurpleParagraph {
     fn superclass() -> (Option<&'static str>, &'static js_sys::Function) {
         (Some("p"), &HtmlParagraphElementConstructor)
     }
