@@ -1,7 +1,7 @@
 mod component;
 
 use crate::component::Model;
-use custom_elements::{inject_stylesheet, GenericCustomElement, HtmlElementConstructor};
+use custom_elements::{inject_stylesheet, GenericCustomElement, HTML_ELEMENT_CONSTRUCTOR};
 use wasm_bindgen::prelude::*;
 use web_sys::HtmlElement;
 use yew::prelude::*;
@@ -74,7 +74,7 @@ pub fn run() {
         move || {
             GenericComponentWrapper::<Model>::new(Box::new(|_| ()), Box::new(|_, _, _| None), None)
         },
-        || (None, &HtmlElementConstructor),
+        || (None, &HTML_ELEMENT_CONSTRUCTOR),
         &["group"],
         false,
     );

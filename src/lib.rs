@@ -65,7 +65,6 @@
 
 use std::cell::RefCell;
 use std::rc::Rc;
-
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::UnwrapThrowExt;
 use web_sys::{window, HtmlElement};
@@ -156,7 +155,7 @@ pub trait CustomElement: GenericCustomElement + Default {
     /// }
     /// ```
     fn superclass() -> (Option<&'static str>, &'static js_sys::Function) {
-        (None, &HtmlElementConstructor)
+        (None, &HTML_ELEMENT_CONSTRUCTOR)
     }
     /// Must be called somewhere to define the custom element and register it with the DOM Custom Elements Registry.
     ///
@@ -274,7 +273,7 @@ pub fn define_custom_tag<T: GenericCustomElement>(
         .unwrap_throw();
 
         // attributeChangedCallback
-        let cmp = component;
+        let cmp = component.clone();
         let attribute_changed = Closure::wrap(Box::new(move |el, name, old_value, new_value| {
             cmp.borrow_mut()
                 .attribute_changed_callback(&el, name, old_value, new_value);
@@ -305,7 +304,7 @@ pub fn define_custom_tag<T: GenericCustomElement>(
         shadow,
         constructor.into_js_value(),
         observed_attributes,
-        super_tag,
+        None,
     );
 }
 
@@ -361,8 +360,8 @@ extern "C" {
     );
 }
 
-#[wasm_bindgen]
+#[wasm_bindgen(thread_local)]
 extern "C" {
     #[wasm_bindgen(js_name = HTMLElement, js_namespace = window)]
-    pub static HtmlElementConstructor: js_sys::Function;
+    pub static HTML_ELEMENT_CONSTRUCTOR: js_sys::Function;
 }
